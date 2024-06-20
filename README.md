@@ -59,7 +59,7 @@ python3 examples/eval_model.py \
 --batch_size 8 \
 --max_length 2048 
 ```
-### inference
+### Inference
 - inference with vLLM 
 
   We recommand to infer with vllm for a faster speed. Refer to this [PR](https://github.com/vllm-project/vllm/pull/5218). Here is an offline inference example.
