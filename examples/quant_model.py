@@ -29,6 +29,7 @@ def parse_args():
     parser.add_argument("--dtype", type=str, default="float16")
     parser.add_argument("--device", type=str, default="cuda")
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--model_type", type=str, default=['llama', 'mamba'])
     return parser.parse_args()
 
 
@@ -56,7 +57,7 @@ def main():
 
     # load model
     model, tokenizer = build_model_and_tokenizer(
-        args.model_path, args.tokenizer_path, args.dtype
+        args.model_path, args.tokenizer_path, args.dtype, args.model_type
     )
 
     # smooth model
@@ -70,7 +71,7 @@ def main():
 
     # load model and apply smooth scales
     model, tokenizer = build_model_and_tokenizer(
-        args.model_path, args.tokenizer_path, args.dtype
+        args.model_path, args.tokenizer_path, args.dtype, args.model_type
     )
     model = export_smoothed_model(model, scale_list)
 

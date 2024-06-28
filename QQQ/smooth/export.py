@@ -1,7 +1,18 @@
-import torch
 import argparse
+
+import torch
 from transformers.models.llama.modeling_llama import LlamaDecoderLayer
+
 from QQQ.utils import build_model_and_tokenizer, get_model_architecture
+from mamba_ssm.models.mixer_seq_simple import MambaLMHeadModel
+
+
+def export_smoothed_mamba(model, scale_list):
+    cnt = 0
+    for name, module in model.named_modules():
+        if isinstance(module, LlamaDecoderLayer):
+            pass
+    pass
 
 
 def export_smoothed_llama(model, scale_list):
@@ -51,6 +62,8 @@ def export_smoothed_model(model, scale_list):
     model_type = get_model_architecture(model.config)
     if model_type == "llama":
         model = export_smoothed_llama(model, scale_list)
+    elif model_type == 'mamba':
+        model = export_smoothed_llama(model, scale_list)
     else:
         raise NotImplementedError
     return model
@@ -64,6 +77,7 @@ def parse_args():
     parser.add_argument("--dtype", type=str, default="float16")
     parser.add_argument("--device", type=str, default="cuda")
     parser.add_argument("--output_path", required=True)
+    parser.add_argument("--model_type", type=str, default=['llama', 'mamba'])
     return parser.parse_args()
 
 
@@ -72,7 +86,7 @@ if __name__ == "__main__":
     if args.tokenizer_path is None:
         args.tokenizer_path = args.model_path
     model, tokenizer = build_model_and_tokenizer(
-        args.model_path, args.tokenizer_path, args.dtype, args.device
+        args.model_path, args.tokenizer_path, args.dtype, args.model_type, args.device
     )
     scale_list = torch.load(args.scale_list)
     model = export_smoothed_model(model, scale_list)

@@ -5,16 +5,18 @@ import torch.nn as nn
 from accelerate.big_modeling import dispatch_model, infer_auto_device_map, get_balanced_memory
 from transformers import AutoConfig, AutoTokenizer, AutoModelForCausalLM, PretrainedConfig
 
+from mamba_ssm.models.mixer_seq_simple import MambaLMHeadModel
 from .utils import str2torch_dtype, str2torch_device
 
 _MODEL_TYPE = {
     "LlamaForCausalLM": "llama",
     "LLaMAForCausalLM": "llama",
+    'MambaLMHeadModel': "mamba"
 }
 
 
 def build_model_and_tokenizer(
-        model_path, tokenizer_path, dtype: str, trust_remote_code: bool = True
+        model_path, tokenizer_path, dtype: str, model_type: str = 'llama', trust_remote_code: bool = True
 ):
     tokenizer = AutoTokenizer.from_pretrained(
         tokenizer_path, trust_remote_code=trust_remote_code
@@ -22,9 +24,12 @@ def build_model_and_tokenizer(
     if tokenizer.pad_token_id is None:
         tokenizer.pad_token_id = tokenizer.eos_token_id
     kwargs = {"torch_dtype": str2torch_dtype(dtype), "device_map": "auto", "attn_implementation": "eager"}
-    model = AutoModelForCausalLM.from_pretrained(
-        model_path, trust_remote_code=trust_remote_code, **kwargs
-    )
+    if model_type.lower == 'llama':
+        model = AutoModelForCausalLM.from_pretrained(model_path, trust_remote_code=trust_remote_code, **kwargs)
+    elif model_type.lower() == 'mamba':
+        model = MambaLMHeadModel.from_pretrained(model_path, trust_remote_code=trust_remote_code, **kwargs)
+    else:
+        raise NotImplementedError
     return model, tokenizer
 
 

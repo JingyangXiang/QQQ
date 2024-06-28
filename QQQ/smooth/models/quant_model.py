@@ -1,4 +1,5 @@
 import quant_llama
+import quant_mamba
 from QQQ.smooth.quantization.observer import ObserverBase
 from QQQ.utils import prepare_for_inference
 
@@ -9,13 +10,24 @@ def quantize_model(fp_model, config_quant, args):
     config_quant.is_remove_padding = config_quant.get("is_remove_padding", True)
     config_quant.migrate = config_quant.get("migrate", False)
     fp_model.eval()
-    model = quant_llama.__dict__["Quantized" + str(fp_model.__class__.__name__)](
-        fp_model,
-        config_quant.w_qconfig,
-        config_quant.a_qconfig,
-        qinput=False,
-        is_remove_padding=config_quant.is_remove_padding,
-    )
+    if args.model_type == 'llama':
+        model = quant_llama.__dict__["Quantized" + str(fp_model.__class__.__name__)](
+            fp_model,
+            config_quant.w_qconfig,
+            config_quant.a_qconfig,
+            qinput=False,
+            is_remove_padding=config_quant.is_remove_padding,
+        )
+    elif args.model_type == 'mamba':
+        model = quant_mamba.__dict__["Quantized" + str(fp_model.__class__.__name__)](
+            fp_model,
+            config_quant.w_qconfig,
+            config_quant.a_qconfig,
+            qinput=False,
+            is_remove_padding=config_quant.is_remove_padding,
+        )
+    else:
+        raise NotImplementedError
     for name, module in model.named_modules():
         if isinstance(module, ObserverBase) and "act" in name:
             module.set_name(name)

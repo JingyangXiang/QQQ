@@ -21,7 +21,6 @@ import torch
 import torch.nn as nn
 from QQQ._CUDA import qqq_gemm
 
-
 logger = getLogger(__name__)
 
 
@@ -47,7 +46,7 @@ class QuantLinear(nn.Module):
     QUANT_TYPE = "marlin"
 
     def __init__(
-        self, bits, group_size, infeatures, outfeatures, bias, trainable=False, **kwargs
+            self, bits, group_size, infeatures, outfeatures, bias, trainable=False, **kwargs
     ):
         super().__init__()
 
@@ -79,7 +78,7 @@ class QuantLinear(nn.Module):
         self.bits = bits
         self.tile = 16
         # only be used when self.group_size != self.infeatures
-        self.maxq = 2**self.bits - 1
+        self.maxq = 2 ** self.bits - 1
         self.max_par = 16
         self.register_buffer(
             "B",
@@ -163,7 +162,6 @@ class QuantLinear(nn.Module):
             scale_perm_single.extend([2 * i + j for j in [0, 1, 8, 9, 16, 17, 24, 25]])
         return perm, scale_perm, scale_perm_single
 
-
     def post_init(self):
         pass
 
@@ -191,7 +189,7 @@ class QuantLinear(nn.Module):
         if self.group_size != self.infeatures:
             s_extra = s_extra.reshape(1, -1).to(dtype=torch.float)
             s = (
-                s.reshape(-1, self.outfeatures) / s_extra
+                    s.reshape(-1, self.outfeatures) / s_extra
             ).to(dtype=torch.half)
 
             w = w.reshape((self.group_size, -1, self.outfeatures))
@@ -199,14 +197,14 @@ class QuantLinear(nn.Module):
             w = w.reshape((self.infeatures, self.outfeatures)).contiguous()
             s = s.reshape((-1, len(self._scale_perm)))[:, self._scale_perm]
             s_extra = s_extra.reshape((-1, len(self._scale_perm_single)))[
-                :, self._scale_perm_single
-            ]
+                      :, self._scale_perm_single
+                      ]
             s_extra = s_extra.reshape((-1, self.outfeatures)).contiguous()
         else:
             # NOTE(zhangying): div 2 ** (8 - self.bits)) to deal with right_shift in unpacking
             s = (s / (2 ** (8 - self.bits))).reshape((-1, len(self._scale_perm_single)))[
                 :, self._scale_perm_single
-            ].to(dtype=torch.float)
+                ].to(dtype=torch.float)
         s = s.reshape((-1, self.outfeatures)).contiguous()
         w = w.reshape(
             (
@@ -247,7 +245,7 @@ class QuantLinear(nn.Module):
         quant_scale = x.abs().max(dim=-1, keepdim=True)[0].div(127.0).to(torch.float)
         x = (x / quant_scale).round().clamp(-128, 127).to(torch.int8)
         return x, quant_scale
-    
+
     def forward(self, A):
         out_shape = A.shape[:-1] + (self.outfeatures,)
         A = A.reshape(-1, A.shape[-1]).half()
@@ -267,5 +265,6 @@ class QuantLinear(nn.Module):
         D = D.reshape(out_shape)
         D = D + self.bias if self.bias is not None else D
         return D
+
 
 __all__ = ["QuantLinear"]
