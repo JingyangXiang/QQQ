@@ -30,11 +30,12 @@ pip install -v -e .
 ## Supported models
 Model support list:
 
-| Models   | Sizes                       |
-| ---------| ----------------------------|
-| LLaMA-1  | 7B/13B/30B/65B              |
-| LLaMA-2  | 7B/13B/70B                  |
-| LLaMA-3  | 8B/70B                      |
+| Models  | Sizes                      |
+|---------|----------------------------|
+| LLaMA-1 | 7B/13B/30B/65B             |
+| LLaMA-2 | 7B/13B/70B                 |
+| LLaMA-3 | 8B/70B                     |
+| Mamba   | 130m/370m/790m/1.4b/2.8b   |
 
 ## Usage
 ### Quantize model
