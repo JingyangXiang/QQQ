@@ -1,10 +1,11 @@
+from typing import Optional
+
 import torch
 import torch.nn as nn
-import functools
-from typing import Optional
-from transformers import AutoConfig, AutoTokenizer, AutoModelForCausalLM, PretrainedConfig
-from .utils import str2torch_dtype, str2torch_device
 from accelerate.big_modeling import dispatch_model, infer_auto_device_map, get_balanced_memory
+from transformers import AutoConfig, AutoTokenizer, AutoModelForCausalLM, PretrainedConfig
+
+from .utils import str2torch_dtype, str2torch_device
 
 _MODEL_TYPE = {
     "LlamaForCausalLM": "llama",
@@ -13,13 +14,13 @@ _MODEL_TYPE = {
 
 
 def build_model_and_tokenizer(
-    model_path, tokenizer_path, dtype: str, trust_remote_code: bool = True
+        model_path, tokenizer_path, dtype: str, trust_remote_code: bool = True
 ):
     tokenizer = AutoTokenizer.from_pretrained(
         tokenizer_path, trust_remote_code=trust_remote_code
     )
     if tokenizer.pad_token_id is None:
-            tokenizer.pad_token_id = tokenizer.eos_token_id
+        tokenizer.pad_token_id = tokenizer.eos_token_id
     kwargs = {"torch_dtype": str2torch_dtype(dtype), "device_map": "auto", "attn_implementation": "eager"}
     model = AutoModelForCausalLM.from_pretrained(
         model_path, trust_remote_code=trust_remote_code, **kwargs
@@ -38,10 +39,10 @@ def get_model_architecture(config):
         f"Supported architectures: {list(_MODEL_TYPE.keys())}"
     )
 
-    
+
 def prepare_for_inference(model, device, dtype):
     if hasattr(model.config, "pretraining_tp"):
-        model.config.pretraining_tp = 1 
+        model.config.pretraining_tp = 1
     model.to(str2torch_dtype(dtype))
     if device == "cuda" and torch.cuda.device_count() > 1:
         max_memory = get_balanced_memory(
@@ -49,15 +50,14 @@ def prepare_for_inference(model, device, dtype):
             no_split_module_classes=model._no_split_modules,
             dtype=str2torch_dtype(dtype)
         )
-        device_map = infer_auto_device_map(model, no_split_module_classes=model._no_split_modules, max_memory=max_memory, dtype=str2torch_dtype(dtype))
+        device_map = infer_auto_device_map(model, no_split_module_classes=model._no_split_modules,
+                                           max_memory=max_memory, dtype=str2torch_dtype(dtype))
         print(device_map)
         dispatch_model(model, device_map=device_map)
     else:
         model.to(str2torch_device(device))
     model.eval()
     return model
-
-
 
 
 def find_layers(module, layers=[nn.Conv2d, nn.Linear], name=""):
@@ -71,6 +71,7 @@ def find_layers(module, layers=[nn.Conv2d, nn.Linear], name=""):
             )
         )
     return res
+
 
 import functools
 
@@ -100,9 +101,10 @@ def recurse_setattr(module, name, value):
         name, rest = name.split(".", 1)
         recurse_setattr(getattr(module, name), rest, value)
 
+
 def get_model_config(model_path: str,
-               trust_remote_code: bool = True,
-               revision: Optional[str] = None) -> PretrainedConfig:
+                     trust_remote_code: bool = True,
+                     revision: Optional[str] = None) -> PretrainedConfig:
     try:
         config = AutoConfig.from_pretrained(
             model_path, trust_remote_code=trust_remote_code, revision=revision)

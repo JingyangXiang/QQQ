@@ -1,10 +1,10 @@
+import logging
+
 import numpy as np  # noqa: F401
 import torch
 import torch.nn as nn
-import os
-import logging
-from scipy.optimize import minimize_scalar, minimize
-import matplotlib.pyplot as plt
+from scipy.optimize import minimize_scalar
+
 from .quant_utils import (
     fake_quantize_per_tensor_affine,
     fake_quantize_per_channel_affine,
@@ -39,7 +39,7 @@ class ObserverBase(nn.Module):
             self.quant_max = 2 ** (self.bit - 1) - 1
         else:
             self.quant_min = 0
-            self.quant_max = 2**self.bit - 1
+            self.quant_max = 2 ** self.bit - 1
         self.register_buffer("min_val", torch.tensor(float("inf")))
         self.register_buffer("max_val", torch.tensor(float("-inf")))
 
@@ -263,10 +263,10 @@ class EMAMinMaxObserver(ObserverBase):
             self.max_val = max_val_cur
         else:
             self.min_val = self.min_val * self.ema_ratio + min_val_cur * (
-                1 - self.ema_ratio
+                    1 - self.ema_ratio
             )
             self.max_val = self.max_val * self.ema_ratio + max_val_cur * (
-                1 - self.ema_ratio
+                    1 - self.ema_ratio
             )
 
 
@@ -309,19 +309,19 @@ class EMAQuantileObserver(ObserverBase):
     """Moving average quantile among batches."""
 
     def __init__(
-        self,
-        bit=8,
-        symmetric=False,
-        ch_axis=-1,
-        ema_ratio=0.9,
-        threshold=0.9999,
-        bins=2048,
+            self,
+            bit=8,
+            symmetric=False,
+            ch_axis=-1,
+            ema_ratio=0.9,
+            threshold=0.9999,
+            bins=2048,
     ):
         super(EMAQuantileObserver, self).__init__(
             bit=bit, symmetric=symmetric, ch_axis=ch_axis
         )
         assert (
-            self.ch_axis == -1
+                self.ch_axis == -1
         ), "Quantile observer only support in per-tensor scheme."
         self.ema_ratio = ema_ratio
         self.threshold = threshold
@@ -363,19 +363,19 @@ class AvgQuantileObserver(ObserverBase):
     """Moving average quantile among batches."""
 
     def __init__(
-        self,
-        bit=8,
-        symmetric=False,
-        ch_axis=-1,
-        ema_ratio=0.9,
-        threshold=0.999,
-        bins=2048,
+            self,
+            bit=8,
+            symmetric=False,
+            ch_axis=-1,
+            ema_ratio=0.9,
+            threshold=0.999,
+            bins=2048,
     ):
         super(AvgQuantileObserver, self).__init__(
             bit=bit, symmetric=symmetric, ch_axis=ch_axis
         )
         assert (
-            self.ch_axis == -1
+                self.ch_axis == -1
         ), "Quantile observer only support in per-tensor scheme."
         self.ema_ratio = ema_ratio
         self.threshold = threshold
@@ -510,7 +510,7 @@ class MSEObserver(ObserverBase):
             )
 
         if (
-            self.one_side_dist != "no" or self.symmetric
+                self.one_side_dist != "no" or self.symmetric
         ):  # one-side distribution or symmetric value for 1-d search
             best_min, best_max = self.perform_1D_search(x)
         else:  # 2-d search
@@ -540,7 +540,7 @@ class AvgMSEObserver(MSEObserver):
             )
 
         if (
-            self.one_side_dist != "no" or self.symmetric
+                self.one_side_dist != "no" or self.symmetric
         ):  # one-side distribution or symmetric value for 1-d search
             best_min, best_max = self.perform_1D_search(x)
         else:  # 2-d search
@@ -690,7 +690,7 @@ class MSEFastObserver(ObserverBase):
             )
 
         if (
-            self.one_side_dist != "no" or self.symmetric
+                self.one_side_dist != "no" or self.symmetric
         ):  # one-side distribution or symmetric value for 1-d search
             best_min, best_max = self.golden_section_1D_search(x)
         else:  # 2-d search
@@ -718,7 +718,7 @@ class AvgMSEFastObserver(MSEFastObserver):
                 "pos" if x.min() >= 0.0 else "neg" if x.max() <= 0.0 else "no"
             )
         if (
-            self.one_side_dist != "no" or self.symmetric
+                self.one_side_dist != "no" or self.symmetric
         ):  # one-side distribution or symmetric value for 1-d search
             best_min, best_max = self.golden_section_1D_search(x)
         else:  # 2-d search
@@ -753,7 +753,7 @@ class EMAMSEFastObserver(MSEFastObserver):
             )
 
         if (
-            self.one_side_dist != "no" or self.symmetric
+                self.one_side_dist != "no" or self.symmetric
         ):  # one-side distribution or symmetric value for 1-d search
             best_min, best_max = self.golden_section_1D_search(x)
         else:  # 2-d search
@@ -763,8 +763,8 @@ class EMAMSEFastObserver(MSEFastObserver):
             self.max_val = best_max
         else:
             self.min_val = self.min_val * self.ema_ratio + best_min * (
-                1 - self.ema_ratio
+                    1 - self.ema_ratio
             )
             self.max_val = self.max_val * self.ema_ratio + best_max * (
-                1 - self.ema_ratio
+                    1 - self.ema_ratio
             )

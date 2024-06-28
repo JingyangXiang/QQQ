@@ -11,7 +11,7 @@ w_qconfig:
     symmetric: True
     ch_axis: 0 # perchannel 0 perlayer -1
 calibrate: 128
-calibrate_path: /mnt/dolphinfs/hdd_pool/docker/share/1/zhangying/datasets/pile/val.jsonl.zst
+calibrate_path: /home/sankuai/dolphinfs_xiangjingyang/huggingface.co/datasets/mit-han-lab/pile-val-backup/val.jsonl.zst
 is_remove_padding: True
 gptq:
     dataset: wikitext2

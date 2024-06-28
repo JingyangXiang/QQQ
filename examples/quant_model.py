@@ -1,9 +1,11 @@
 import argparse
 import logging
 import os
+
 import torch
-from QQQ.smooth import smooth, export_smoothed_model, quantize_model
+
 from QQQ.gptq import apply_gptq
+from QQQ.smooth import smooth, export_smoothed_model, quantize_model
 from QQQ.utils import (
     setup_seed,
     parse_config,
@@ -12,6 +14,7 @@ from QQQ.utils import (
     free_memory,
     save_json,
 )
+
 logger = logging.getLogger("QQQ")
 
 
@@ -57,7 +60,9 @@ def main():
     )
 
     # smooth model
+    # 插入量化节点
     model = quantize_model(model, q_config, args)
+    # 获取到scale-list
     scale_list = smooth(model, tokenizer, q_config, args)
     del model
     del tokenizer

@@ -8,7 +8,7 @@ def get_pile(nsamples, seed, seqlen, model):
     print("get_pile")
     traindata = load_dataset(
         "json",
-        data_files="/mnt/dolphinfs/hdd_pool/docker/share/1/zhangying/datasets/pile/val.jsonl.zst",
+        data_files="/home/sankuai/dolphinfs_xiangjingyang/huggingface.co/datasets/mit-han-lab/pile-val-backup/val.jsonl.zst",
         split="train",
     )
 

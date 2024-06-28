@@ -1,18 +1,19 @@
-import torch
 import logging
-import random
 import os
+import random
 import time
+
+import torch
 from datasets import load_dataset, load_from_disk, Dataset
 from torch.utils.data import DataLoader
 from transformers import TrainingArguments
 
+from QQQ.utils import get_model_architecture
 from .quantization.quantized_module import QuantizedModule
 from .quantization.state import (
     enable_calibration_quantization,
     disable_all,
 )
-from QQQ.utils import get_model_architecture
 
 logger = logging.getLogger("QQQ")
 
@@ -95,7 +96,6 @@ def calibrate_batch(model, fp_input):
 
 
 def get_eval_dataloader(eval_dataset, training_args):
-
     return DataLoader(
         eval_dataset,
         batch_size=training_args.per_device_eval_batch_size,
@@ -111,6 +111,7 @@ def smooth(model, tokenizer, q_config, args):
     # get cali data
     logger.info("begin building calibration data!")
     training_args = make_huggingface_training_args(args.batch_size)
+    # 获取到数据集
     cali_data = prepare_data(
         tokenizer,
         q_config.calibrate_path,
@@ -119,7 +120,9 @@ def smooth(model, tokenizer, q_config, args):
         max_length=q_config.max_length
     )
     # get trainer
+    # 配置pytorch的Dataloader
     dataloader = get_eval_dataloader(cali_data, training_args)
+    # 获取输入输出
     fp_input, fp_output = prepare_input_output(model, dataloader)
 
     logger.info("begin smooth!")

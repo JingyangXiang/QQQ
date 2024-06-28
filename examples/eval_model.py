@@ -1,13 +1,16 @@
-import os
-from tqdm import tqdm
 import argparse
 import collections
+import os
+
+import lm_eval
 import torch
 import torch.nn as nn
-from transformers import AutoTokenizer
-import lm_eval
 from lm_eval import tasks, simple_evaluate
 from lm_eval.models.huggingface import HFLM
+from tqdm import tqdm
+from transformers import AutoTokenizer
+
+from QQQ.gptq.models import get_quantized_model_class
 from QQQ.utils import (
     get_model_architecture,
     get_model_config,
@@ -17,7 +20,6 @@ from QQQ.utils import (
     update_results,
     setup_seed,
 )
-from QQQ.gptq.models import get_quantized_model_class
 
 
 def parse_args():
@@ -35,7 +37,7 @@ def parse_args():
         help="path contains tokenizer",
     )
     parser.add_argument("--tasks", default="")
-    parser.add_argument("--eval_ppl", action="store_true", default=True)
+    parser.add_argument("--eval_ppl", action="store_true", default=False)
     parser.add_argument("--batch_size", type=int, default=8)
     parser.add_argument("--max_length", type=int, default=2048)
     parser.add_argument("--num_fewshot", type=int, default=0)
@@ -45,10 +47,12 @@ def parse_args():
 
 @torch.no_grad()
 def eval_model(model, tokenizer, args):
+    # 最大的程度
     max_length = args.max_length
     print(max_length)
     results = {}
     # eval ppl
+    # 测试ppl
     if args.eval_ppl:
         for task in ["wikitext2"]:
             _, testloader = get_loaders(
@@ -62,20 +66,22 @@ def eval_model(model, tokenizer, args):
             else:
                 testenc = testloader.input_ids
 
+            # 获取到训练样本
             nsamples = testenc.numel() // max_length
 
             nlls = []
+            # 计算ppl的代码
             for i in tqdm(range(nsamples)):
-                batched_inps = testenc[:, (i * max_length) : ((i + 1) * max_length)].to(
+                batched_inps = testenc[:, (i * max_length): ((i + 1) * max_length)].to(
                     model.device
                 )
                 outputs = model.model(batched_inps)
                 hidden_states = outputs[0]
                 logits = model.lm_head(hidden_states)
                 shift_logits = logits[:, :-1, :]
-                shift_labels = testenc[:, (i * max_length) : ((i + 1) * max_length)][
-                    :, 1:
-                ].to(model.lm_head.weight.device)
+                shift_labels = testenc[:, (i * max_length): ((i + 1) * max_length)][
+                               :, 1:
+                               ].to(model.lm_head.weight.device)
                 loss_fct = nn.CrossEntropyLoss()
                 loss = loss_fct(
                     shift_logits.view(-1, shift_logits.size(-1)),
@@ -124,19 +130,28 @@ def eval_model(model, tokenizer, args):
 if __name__ == "__main__":
     args = parse_args()
     setup_seed(args.seed)
+    # 模型中自带的配置文件+解析文件参数, 文件是量化模型的时候能存储的
     config_path = os.path.join(args.model_path, "quant_config.json")
     quant_config = parse_quant_config(config_path)
+
+    # 获取模型配置
     config = get_model_config(args.model_path)
+    # 获取模型
     model_type = get_model_architecture(config)
+    # 模型到量化的模型, 涉及到量化的层等信息
     quant_model_class = get_quantized_model_class(model_type)
+
+    # 得到model, 得到tokenizer
     model = quant_model_class.from_pretrained(
         args.model_path,
         quant_config=quant_config,
         device_map="sequential",
         attn_implementation="eager",
     )
+
     tokenizer = AutoTokenizer.from_pretrained(
         args.tokenizer_path,
         trust_remote_code=True,
     )
+    # 测试模型
     eval_model(model, tokenizer, args)

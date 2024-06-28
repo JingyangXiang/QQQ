@@ -48,6 +48,21 @@ python3 examples/quant_model.py \
 --quant_config quant_config/llama/w4a8.yaml \ # uses quant_config/llama/w4a8-pergroup.yaml for per-group weigth quantization
 --save_path ${save_path}
 ```
+
+```
+export model_path=/home/sankuai/dolphinfs_xiangjingyang/huggingface.co/meta-llama/Llama-2-7b-hf
+export tokenizer_path=${model_path}
+export save_path=./Llama-2-7b-hf
+python3 examples/quant_model.py \
+--model_path ${model_path} \
+--tokenizer_path ${tokenizer_path} \
+--batch_size 8 \
+--dtype float16 \
+--quant_config quant_config/llama/w4a8.yaml \
+--save_path ${save_path}
+```
+
+
 ### Evaluate Model
 Here is an example for evaluating perplexity on WikiText2 and accuracy on some zero-shot tasks.
 ```

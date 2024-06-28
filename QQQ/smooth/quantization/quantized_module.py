@@ -1,8 +1,18 @@
-from torch import nn
-import torch.nn.functional as F
 import copy  # noqa: F401
-import torch  # noqa: F401
 import gc
+
+import torch  # noqa: F401
+import torch.nn.functional as F
+from torch import nn
+
+from .fake_quant import (
+    FixedFakeQuantize,
+    GroupFixedFakeQuantize,
+    TokenFixedFakeQuantize,
+    FixedQuantize,
+    GroupFixedQuantize,
+    TokenGroupFixedFakeQuantize,
+)
 from .observer import (
     AvgTokenQuantileObserver,
     MinMaxObserver,
@@ -18,15 +28,6 @@ from .observer import (
     LSQPlusObserver,
     QuantileObserver,
 )
-from .fake_quant import (
-    FixedFakeQuantize,
-    GroupFixedFakeQuantize,
-    TokenFixedFakeQuantize,
-    FixedQuantize,
-    GroupFixedQuantize,
-    TokenGroupFixedFakeQuantize,
-)
-
 
 ObserverDict = {
     "MinMaxObserver": MinMaxObserver,  # noqa: E241
@@ -45,7 +46,8 @@ ObserverDict = {
 }
 
 FakeQuantizeDict = {
-    "FixedFakeQuantize": FixedFakeQuantize,  # Unlearnable scale/zeropoint  # noqa: E241                       # noqa: E241
+    "FixedFakeQuantize": FixedFakeQuantize,
+    # Unlearnable scale/zeropoint  # noqa: E241                       # noqa: E241
     "GroupFixedFakeQuantize": GroupFixedFakeQuantize,
     "TokenFixedFakeQuantize": TokenFixedFakeQuantize,
     "FixedQuantize": FixedQuantize,
@@ -70,17 +72,17 @@ class QuantizedOperator:
 
 class QConv2d(QuantizedOperator, nn.Conv2d):
     def __init__(
-        self,
-        in_channels,
-        out_channels,
-        kernel_size,
-        stride,
-        padding,
-        dilation,
-        groups,
-        bias,
-        padding_mode,
-        w_qconfig,
+            self,
+            in_channels,
+            out_channels,
+            kernel_size,
+            stride,
+            padding,
+            dilation,
+            groups,
+            bias,
+            padding_mode,
+            w_qconfig,
     ):
         super().__init__(
             in_channels=in_channels,
@@ -110,16 +112,16 @@ class QLinear(QuantizedOperator, nn.Linear):
 
 class QEmbedding(QuantizedOperator, nn.Embedding):
     def __init__(
-        self,
-        num_embeddings,
-        embedding_dim,
-        padding_idx,
-        max_norm,
-        norm_type,
-        scale_grad_by_freq,
-        sparse,
-        _weight,
-        w_qconfig,
+            self,
+            num_embeddings,
+            embedding_dim,
+            padding_idx,
+            max_norm,
+            norm_type,
+            scale_grad_by_freq,
+            sparse,
+            _weight,
+            w_qconfig,
     ):
         super().__init__(
             num_embeddings=num_embeddings,

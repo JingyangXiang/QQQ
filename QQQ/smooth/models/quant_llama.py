@@ -1,32 +1,31 @@
 """ PyTorch QuantizedLLaMA model."""
-import math
 import logging
+import math
 from typing import List, Optional, Tuple, Union
 
 import torch
 import torch.utils.checkpoint
 from torch import nn
-from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+from torch.nn import CrossEntropyLoss
 from transformers.modeling_outputs import (
     BaseModelOutputWithPast,
     CausalLMOutputWithPast,
 )
 from transformers.modeling_utils import (
-    GenerationMixin,
     ModuleUtilsMixin,
     PreTrainedModel,
 )
 
+from QQQ.smooth.models.util_layernorm import Identity
 from QQQ.smooth.quantization import Quantizer, QuantizedLayer, QuantizedModule
 from QQQ.smooth.quantization.migration_llama import migration
-from QQQ.smooth.models.util_layernorm import QuantizedLayerNorm, Identity
 
 logger = logging.getLogger("QQQ")
 
 
 # Copied from transformers.models.bart.modeling_bart._make_causal_mask
 def _make_causal_mask(
-    input_ids_shape: torch.Size, dtype: torch.dtype, past_key_values_length: int = 0
+        input_ids_shape: torch.Size, dtype: torch.dtype, past_key_values_length: int = 0
 ):
     """
     Make causal mask used for bi-directional self-attention.
@@ -66,7 +65,7 @@ def _expand_mask(mask: torch.Tensor, dtype: torch.dtype, tgt_len: Optional[int] 
 def rotate_half(x):
     """Rotates half the hidden dims of the input."""
     x1 = x[..., : x.shape[-1] // 2]
-    x2 = x[..., x.shape[-1] // 2 :]
+    x2 = x[..., x.shape[-1] // 2:]
     return torch.cat((-x2, x1), dim=-1)
 
 
@@ -130,7 +129,7 @@ class QuantizedLlamaRMSNorm(nn.Module):
 
 class QuantizedLlamaAttention(QuantizedModule):
     def __init__(
-        self, org_module, w_qconfig, a_qconfig, qinput=True, backend="academic"
+            self, org_module, w_qconfig, a_qconfig, qinput=True, backend="academic"
     ):
         super().__init__(backend=backend)
         self.w_qconfig = w_qconfig
@@ -170,14 +169,14 @@ class QuantizedLlamaAttention(QuantizedModule):
         )
 
     def forward(
-        self,
-        hidden_states: torch.Tensor,
-        attention_mask: Optional[torch.Tensor] = None,
-        position_ids: Optional[torch.LongTensor] = None,
-        past_key_value: Optional[Tuple[torch.Tensor]] = None,
-        output_attentions: bool = False,
-        use_cache: bool = False,
-        observation_mask=None,
+            self,
+            hidden_states: torch.Tensor,
+            attention_mask: Optional[torch.Tensor] = None,
+            position_ids: Optional[torch.LongTensor] = None,
+            past_key_value: Optional[Tuple[torch.Tensor]] = None,
+            output_attentions: bool = False,
+            use_cache: bool = False,
+            observation_mask=None,
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor]]]:
         bsz, q_len, _ = hidden_states.size()
 
@@ -283,7 +282,7 @@ class QuantizedLlamaAttention(QuantizedModule):
 
 class QuantizedLlamaDecoderLayer(QuantizedModule):
     def __init__(
-        self, org_module, w_qconfig, a_qconfig, qinput=True, backend="academic"
+            self, org_module, w_qconfig, a_qconfig, qinput=True, backend="academic"
     ):
         super().__init__(backend=backend)
         self.w_qconfig = w_qconfig
@@ -323,14 +322,14 @@ class QuantizedLlamaDecoderLayer(QuantizedModule):
         self.act_fn = org_module.mlp.act_fn
 
     def forward(
-        self,
-        hidden_states: torch.Tensor,
-        attention_mask: Optional[torch.Tensor] = None,
-        position_ids: Optional[torch.LongTensor] = None,
-        past_key_value: Optional[Tuple[torch.Tensor]] = None,
-        output_attentions: Optional[bool] = False,
-        use_cache: Optional[bool] = False,
-        observation_mask=None,
+            self,
+            hidden_states: torch.Tensor,
+            attention_mask: Optional[torch.Tensor] = None,
+            position_ids: Optional[torch.LongTensor] = None,
+            past_key_value: Optional[Tuple[torch.Tensor]] = None,
+            output_attentions: Optional[bool] = False,
+            use_cache: Optional[bool] = False,
+            observation_mask=None,
     ) -> Tuple[
         torch.FloatTensor, Optional[Tuple[torch.FloatTensor, torch.FloatTensor]]
     ]:
@@ -476,7 +475,7 @@ class QuantizedLlamaDecoderLayer(QuantizedModule):
 
 class QuantizedLlamaModel(QuantizedModule, ModuleUtilsMixin):
     def __init__(
-        self, org_module, w_qconfig, a_qconfig, qinput=True, backend="academic"
+            self, org_module, w_qconfig, a_qconfig, qinput=True, backend="academic"
     ):
         super().__init__(backend=backend)
         self.qinput = qinput
@@ -503,7 +502,7 @@ class QuantizedLlamaModel(QuantizedModule, ModuleUtilsMixin):
 
     # Copied from transformers.models.bart.modeling_bart.BartDecoder._prepare_decoder_attention_mask
     def _prepare_decoder_attention_mask(
-        self, attention_mask, input_shape, inputs_embeds, past_key_values_length
+            self, attention_mask, input_shape, inputs_embeds, past_key_values_length
     ):
         # create causal mask
         # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
@@ -529,17 +528,17 @@ class QuantizedLlamaModel(QuantizedModule, ModuleUtilsMixin):
         return combined_attention_mask
 
     def forward(
-        self,
-        input_ids: torch.LongTensor = None,
-        attention_mask: Optional[torch.Tensor] = None,
-        position_ids: Optional[torch.LongTensor] = None,
-        past_key_values: Optional[List[torch.FloatTensor]] = None,
-        inputs_embeds: Optional[torch.FloatTensor] = None,
-        use_cache: Optional[bool] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
-        observation_mask=None,
+            self,
+            input_ids: torch.LongTensor = None,
+            attention_mask: Optional[torch.Tensor] = None,
+            position_ids: Optional[torch.LongTensor] = None,
+            past_key_values: Optional[List[torch.FloatTensor]] = None,
+            inputs_embeds: Optional[torch.FloatTensor] = None,
+            use_cache: Optional[bool] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
+            observation_mask=None,
     ) -> Union[Tuple, BaseModelOutputWithPast]:
         output_attentions = (
             output_attentions
@@ -689,13 +688,13 @@ class QuantizedLlamaModel(QuantizedModule, ModuleUtilsMixin):
 
 class QuantizedLlamaForCausalLM(PreTrainedModel, QuantizedModule):
     def __init__(
-        self,
-        org_module,
-        w_qconfig,
-        a_qconfig,
-        qinput=True,
-        backend="academic",
-        is_remove_padding=False,
+            self,
+            org_module,
+            w_qconfig,
+            a_qconfig,
+            qinput=True,
+            backend="academic",
+            is_remove_padding=False,
     ):
         PreTrainedModel.__init__(self, org_module.config)
         QuantizedModule.__init__(self, backend=backend)
@@ -734,17 +733,17 @@ class QuantizedLlamaForCausalLM(PreTrainedModel, QuantizedModule):
         return self.model
 
     def forward(
-        self,
-        input_ids: torch.LongTensor = None,
-        attention_mask: Optional[torch.Tensor] = None,
-        position_ids: Optional[torch.LongTensor] = None,
-        past_key_values: Optional[List[torch.FloatTensor]] = None,
-        inputs_embeds: Optional[torch.FloatTensor] = None,
-        labels: Optional[torch.LongTensor] = None,
-        use_cache: Optional[bool] = None,
-        output_attentions: Optional[bool] = None,
-        output_hidden_states: Optional[bool] = None,
-        return_dict: Optional[bool] = None,
+            self,
+            input_ids: torch.LongTensor = None,
+            attention_mask: Optional[torch.Tensor] = None,
+            position_ids: Optional[torch.LongTensor] = None,
+            past_key_values: Optional[List[torch.FloatTensor]] = None,
+            inputs_embeds: Optional[torch.FloatTensor] = None,
+            labels: Optional[torch.LongTensor] = None,
+            use_cache: Optional[bool] = None,
+            output_attentions: Optional[bool] = None,
+            output_hidden_states: Optional[bool] = None,
+            return_dict: Optional[bool] = None,
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         r"""
         Args:
@@ -834,12 +833,12 @@ class QuantizedLlamaForCausalLM(PreTrainedModel, QuantizedModule):
         )
 
     def prepare_inputs_for_generation(
-        self,
-        input_ids,
-        past_key_values=None,
-        attention_mask=None,
-        inputs_embeds=None,
-        **kwargs,
+            self,
+            input_ids,
+            past_key_values=None,
+            attention_mask=None,
+            inputs_embeds=None,
+            **kwargs,
     ):
         if past_key_values:
             input_ids = input_ids[:, -1:]

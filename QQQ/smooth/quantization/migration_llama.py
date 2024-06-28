@@ -1,15 +1,15 @@
+import logging
 import math
+
 import torch
 import torch.nn as nn
-import logging
-from scipy.optimize import minimize_scalar
-from .fake_quant import QuantizeBase
+
+import QQQ.smooth.models.quant_llama as quant_llama
 from .observer import MinMaxObserver
 from .quant_utils import (
     fake_quantize_per_channel_affine,
     fake_quantize_per_tensor_affine,
 )
-import QQQ.smooth.models.quant_llama as quant_llama
 
 logger = logging.getLogger("QQQ")
 scale_list = []
@@ -33,7 +33,7 @@ def migration(act, weight, a_qconfig, w_qconfig, module_type, extra_dict=None):
 
 class MigratorBase(nn.Module):
     def __init__(
-        self, input, weight, a_qconfig, w_qconfig, module_type, extra_dict=None
+            self, input, weight, a_qconfig, w_qconfig, module_type, extra_dict=None
     ):
         super().__init__()
         self.input = input
@@ -180,12 +180,12 @@ class MigratorBase(nn.Module):
             .transpose(1, 2)
         )
         k = (
-            qkv[:, :, sz_q : sz_q + sz_kv]
+            qkv[:, :, sz_q: sz_q + sz_kv]
             .view(B, N, self.extra_dict["num_key_value_heads"], head_dim)
             .transpose(1, 2)
         )
         v = (
-            qkv[:, :, sz_q + sz_kv :]
+            qkv[:, :, sz_q + sz_kv:]
             .view(B, N, self.extra_dict["num_key_value_heads"], head_dim)
             .transpose(1, 2)
         )
@@ -233,14 +233,14 @@ class MigratorBase(nn.Module):
         return output[self.extra_dict["observation_mask"] == 1].to(torch.float32)
 
     def forward(
-        self,
+            self,
     ):
         pass
 
 
 class Migrator1DRangeSearch(MigratorBase):
     def __init__(
-        self, input, weight, a_qconfig, w_qconfig, module_type, extra_dict=None
+            self, input, weight, a_qconfig, w_qconfig, module_type, extra_dict=None
     ):
         super().__init__(input, weight, a_qconfig, w_qconfig, module_type, extra_dict)
         self.num = max(100, int(self.amx / 0.5))
@@ -252,7 +252,7 @@ class Migrator1DRangeSearch(MigratorBase):
         )
 
     def search_migrate_range_1D(
-        self,
+            self,
     ):
         best_loss = None
         bounds = (0.1, max(-self.amn.item(), self.amx.item()))
@@ -276,16 +276,14 @@ class Migrator1DRangeSearch(MigratorBase):
             torch.tensor(mx_range, dtype=self.dtype).to(self.device),
         )
 
-    def forward(
-        self,
-    ):
+    def forward(self, ):
         best_range = self.search_migrate_range_1D()
         return self.get_best_scale(*best_range)
 
 
 class Migrator1DRangeSearchAWQ(MigratorBase):
     def __init__(
-        self, input, weight, a_qconfig, w_qconfig, module_type, extra_dict=None
+            self, input, weight, a_qconfig, w_qconfig, module_type, extra_dict=None
     ):
         super().__init__(input, weight, a_qconfig, w_qconfig, module_type, extra_dict)
         self.num = max(100, int(self.amx / 0.5))
@@ -320,7 +318,7 @@ class Migrator1DRangeSearchAWQ(MigratorBase):
         return scales
 
     def search_migrate_range_1D(
-        self,
+            self,
     ):
         best_loss = float("inf")
         best_ratio = -1
@@ -349,7 +347,7 @@ class Migrator1DRangeSearchAWQ(MigratorBase):
         return best_scales
 
     def forward(
-        self,
+            self,
     ):
         best_scales = self.search_migrate_range_1D()
         return self.get_best_scale(best_scales)
@@ -357,14 +355,14 @@ class Migrator1DRangeSearchAWQ(MigratorBase):
 
 class Migrator1DRangeSearchSQ(MigratorBase):
     def __init__(
-        self,
-        input,
-        weight,
-        a_qconfig,
-        w_qconfig,
-        module_type,
-        extra_dict=None,
-        smooth_alpha=0.5,
+            self,
+            input,
+            weight,
+            a_qconfig,
+            w_qconfig,
+            module_type,
+            extra_dict=None,
+            smooth_alpha=0.5,
     ):
         super().__init__(input, weight, a_qconfig, w_qconfig, module_type, extra_dict)
         self.smooth_alpha = smooth_alpha
@@ -384,14 +382,14 @@ class Migrator1DRangeSearchSQ(MigratorBase):
         return scales
 
     def forward(
-        self,
+            self,
     ):
         act_scales = torch.max(self.cmx.abs(), self.cmn.abs())
         weight_scales = self.weight.max(dim=0)[0].clamp(min=1e-5).to(self.device)
         best_scales = (
             (
-                act_scales.pow(self.smooth_alpha)
-                / weight_scales.pow(1 - self.smooth_alpha)
+                    act_scales.pow(self.smooth_alpha)
+                    / weight_scales.pow(1 - self.smooth_alpha)
             )
             .clamp(min=1e-5)
             .to(self.dtype)
